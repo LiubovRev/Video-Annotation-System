@@ -25,8 +25,17 @@ It bridges raw video processing, pose-based feature engineering, and supervised 
 - developing feature extraction from skeleton keypoints
 - enabling dataset generation for downstream ML model training
 
+## Key Engineering Features
+
+- Config-driven pipeline execution
+- Modular step control (skip flags)
+- Structured logging with full parameter capture
+- Deterministic feature extraction
+- Automatic annotation-frame alignment
+- Model persistence and evaluation artifacts
+  
 ## Status
-Research prototype developed for internal ML experimentation.
+Applied ML prototype designed for scalable clinical video processing workflows.
 
 ---
 
