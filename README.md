@@ -13,6 +13,12 @@ The system was used to annotate video data for downstream computer vision tasks 
 ## ML Workflow
 Video preprocessing → Object tracking → Pose estimation → Optional pose clustering → Annotation alignment → Machine learning model training → Prediction on new data 
 
+## Why This Project Matters
+
+This system was built to transform unstructured clinical therapy videos into structured datasets suitable for machine learning experimentation.
+
+It bridges raw video processing, pose-based feature engineering, and supervised model training in a reproducible pipeline.
+
 ## My contribution included:
 - designing and implementing the end-to-end processing pipeline
 - integrating pose estimation
