@@ -9,8 +9,6 @@ The pipeline processes raw therapy session videos, extracts pose keypoints, gene
 ## Overview
 This project provides a lightweight annotation tool designed to support machine learning workflows for clinical video analysis.
 
-Developed during work at CHUV (Lausanne).
-
 ## Purpose
 The system was used to annotate video data for downstream computer vision tasks such as pose-based behavior classification.
 
