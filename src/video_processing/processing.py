@@ -23,9 +23,6 @@ START_TRIM_SEC = 0
 END_TRIM_SEC = 100
 
 # ----------------------------------------------------------
-# GLOBAL SCENE CROP  ✅ IMPORTANT
-# (adjust once so BOTH women always visible)
-# ----------------------------------------------------------
 
 X_MIN = 40
 Y_MIN = 40
@@ -37,7 +34,7 @@ RESIZE_W = None
 RESIZE_H = None
 
 # ----------------------------------------------------------
-POSE_MASK_THRESHOLD = "0.0"     # ← critical for seated people
+POSE_MASK_THRESHOLD = "0.0"     #  critical for seated people
 POSE_MODEL_COMPLEXITY = "2"
 
 BASE_PATH = Path(
@@ -97,10 +94,8 @@ def build_env():
     return env
 
 
-# ==========================================================
 # ===================== FFMPEG =============================
 # ==========================================================
-
 def build_ffmpeg():
     crop = f"crop={X_MAX-X_MIN}:{Y_MAX-Y_MIN}:{X_MIN}:{Y_MIN}"
 
@@ -119,7 +114,7 @@ def build_ffmpeg():
         "-map","0:0",
         "-vf",",".join(vf),
 
-        # ✅ CLEAN RE-ENCODE
+        #  CLEAN RE-ENCODE
         "-c:v","libx264",
         "-preset","slow",
         "-crf","18",
@@ -199,7 +194,7 @@ def main():
         "--confidence_threshold","0.0"
     ],"Pose visualization",env)
 
-    print("\n✅ DONE")
+    print("\n DONE")
 
 
 if __name__ == "__main__":
