@@ -66,7 +66,7 @@ base_data      = PROJECT_ROOT_PARENT / (directories_cfg.get("base_data_dir") or 
 output_base    = PROJECT_ROOT_PARENT / (directories_cfg.get("output_base_dir") or "outputs")
 output_base.mkdir(parents=True, exist_ok=True)
 
-print(f"✅ Loaded config from {CONFIG_FILE}")
+print(f" Loaded config from {CONFIG_FILE}")
 print(f"Raw videos: {raw_root}")
 print(f"Output base: {output_base}")
 
@@ -101,15 +101,15 @@ for project_dir in project_dirs:
             print("  ✗ Video processing failed, skipping project.")
             continue
     else:
-        print("  → Skipping video processing step.")
+        print("   Skipping video processing step.")
 
     # Step 2: Pose extraction
     if not skip_pose_extraction:
         if not run_pose_extraction(project_dir, cfg):
-            print("  ✗ Pose extraction failed, skipping project.")
+            print("   Pose extraction failed, skipping project.")
             continue
     else:
-        print("  → Skipping pose extraction step.")
+        print("   Skipping pose extraction step.")
 
     # Merge processed parquet files
     processed_files = list(project_dir.glob("processed_data__*.parquet"))
@@ -124,47 +124,47 @@ for project_dir in project_dirs:
         id_map = cfg["pose_extraction"].get("id_to_label", {})
         df["person_label"] = df["person_label"].replace(id_map)
         df.to_csv(combined_csv, index=False)
-        print(f"  ✓ Merged {len(processed_files)} parquet files into {combined_csv.name}")
+        print(f"   Merged {len(processed_files)} parquet files into {combined_csv.name}")
     else:
         df = pd.read_csv(combined_csv)
-        print(f"  ✓ Loaded existing CSV: {combined_csv.name} ({len(df)} rows)")
+        print(f"   Loaded existing CSV: {combined_csv.name} ({len(df)} rows)")
 
     # Step 3: Pose clustering
     if skip_pose_clustering:
-        print("  → Skipping pose clustering step.")
+        print("   Skipping pose clustering step.")
     else:
         cluster_path = output_dir / f"pose_clusters_{project_name}.parquet"
         if cluster_path.exists() and not force_recombine:
-            print(f"  ✓ Existing cluster file found: {cluster_path.name}")
+            print(f"   Existing cluster file found: {cluster_path.name}")
         else:
-            print("  → Running pose clustering...")
+            print("   Running pose clustering...")
             run_pose_clustering(df=df, output_path=cluster_path, cfg=cfg)
 
     # Step 4: Annotation alignment
     if skip_annotation_processing:
-        print("  → Skipping annotation alignment (flag set).")
+        print("  Skipping annotation alignment (flag set).")
         continue
 
     labeled_df = run_annotation_alignment(project_name, cfg, output_dir)
     if labeled_df is None:
-        print(f"  ✗ Annotation alignment failed, skipping project.")
+        print(f"  Annotation alignment failed, skipping project.")
         continue
 
     # -------------------------
     # Step 5: Prediction (NEW)
     # -------------------------
     if skip_prediction:
-        print("  → Skipping prediction step (flag set).")
+        print("  Skipping prediction step (flag set).")
     else:
         try:
             pred_file = output_dir / "predictions_processed_data.csv"
             if pred_file.exists() and not force_recombine:
-                print(f"  ✓ Predictions already exist: {pred_file.name}")
+                print(f"  Predictions already exist: {pred_file.name}")
             else:
                 print("  → Running prediction...")
                 predict_annotations(combined_csv, output_dir, cfg)
         except Exception as e:
-            print(f"  ✗ Prediction failed for {project_name}: {e}")
+            print(f"  Prediction failed for {project_name}: {e}")
 
 # -------------------------
 # Combine labeled features across projects
@@ -175,14 +175,14 @@ print("="*70)
 
 combined_path = output_base / "combined_labeled_features.csv"
 if combined_path.exists() and not force_recombine:
-    print(f"✓ Found existing combined dataset: {combined_path.name}")
+    print(f" Found existing combined dataset: {combined_path.name}")
 else:
     labeled_files = list(output_base.glob("*/labeled_features.csv"))
     if not labeled_files:
         print(" No labeled feature files found — cannot combine.")
         exit()
 
-    print(f"✓ Found {len(labeled_files)} labeled feature files.")
+    print(f" Found {len(labeled_files)} labeled feature files.")
     all_dfs = []
     for f in labeled_files:
         try:
@@ -194,13 +194,13 @@ else:
             print(f"   Skipping {f.name}: {e}")
 
     if not all_dfs:
-        print("✗ No valid dataframes to combine")
+        print(" No valid dataframes to combine")
         exit()
 
     combined_df = pd.concat(all_dfs, ignore_index=True)
-    print(f"✓ Combined dataset shape: {combined_df.shape}")
+    print(f" Combined dataset shape: {combined_df.shape}")
     combined_df.to_csv(combined_path, index=False)
-    print(f"✓ Saved: {combined_path.name}")
+    print(f" Saved: {combined_path.name}")
 
 # -------------------------
 # Step 6: Model Training
@@ -211,16 +211,16 @@ print("="*70)
 
 model_file = output_base / Path(cfg["model"]["file"]).name
 if model_file.exists():
-    print(f"✓ Model already exists: {model_file.name} — skipping training.")
+    print(f" Model already exists: {model_file.name} — skipping training.")
     model_package = None
 else:
     try:
         model_package = train_model(combined_df, output_base, cfg)
-        print(f"\n✓ Training complete.")
-        print(f"✓ Best Model: {model_package['model_name']}")
-        print(f"✓ Final F1 Score: {model_package['f1_score']:.4f}")
+        print(f"\n Training complete.")
+        print(f" Best Model: {model_package['model_name']}")
+        print(f" Final F1 Score: {model_package['f1_score']:.4f}")
     except Exception as e:
-        print(f"✗ Model training failed: {e}")
+        print(f" Model training failed: {e}")
         import traceback
         traceback.print_exc()
         model_package = None
@@ -231,9 +231,9 @@ else:
 print("\n" + "="*70)
 print("PIPELINE COMPLETE - SUMMARY")
 print("="*70)
-print(f"✓ All projects processed")
-print(f"✓ Results saved in: {output_base}")
+print(f" All projects processed")
+print(f" Results saved in: {output_base}")
 if model_package:
-    print(f"✓ Best Model: {model_package['model_name']}")
-    print(f"✓ F1 Score:   {model_package['f1_score']:.4f}")
+    print(f" Best Model: {model_package['model_name']}")
+    print(f" F1 Score:   {model_package['f1_score']:.4f}")
 print("="*70)
