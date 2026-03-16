@@ -431,9 +431,7 @@ class Visualizer:
             print(f"    Saved: {name}")
         plt.close(fig)
 
-# --- Remaining Visualizer methods (plot_clinical_overview, plot_clustering_results) ---
-# These remain essentially the same but follow consistent spacing and docstrings
-# (Omitted here for brevity, can be fully rewritten like Part 1–3 if needed)
+
 
 
 # =============================================================================
