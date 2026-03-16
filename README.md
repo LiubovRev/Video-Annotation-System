@@ -13,7 +13,7 @@ This project provides a lightweight annotation tool designed to support machine 
 The system was used to annotate video data for downstream computer vision tasks such as pose-based behavior classification.
 
 ## ML Workflow
-Video preprocessing → Object tracking → Pose estimation → Optional pose clustering → Annotation alignment → Machine learning model training → Prediction on new data 
+Video preprocessing → Object tracking → Pose estimation →  Annotation alignment → Machine learning model training → Prediction on new data 
 
 ## Why This Project Matters
 
@@ -129,16 +129,14 @@ Step 1: Video Processing
         ▼
 Step 2: Pose Extraction
         │
-        ├── (Optional) Step 3: Pose Clustering
+        ▼
+Step 3: Annotation Alignment
         │
         ▼
-Step 4: Annotation Alignment
+Step 4: Model Training
         │
         ▼
-Step 5: Model Training
-        │
-        ▼
-Step 6: Prediction
+Step 5: Prediction
 ```
 
 ---
@@ -225,16 +223,13 @@ python src/video_processing/processing.py
 # Step 2: Pose extraction
 python src/pose/extractor.py
 
-# Step 3: Pose clustering (optional)
-python src/pose/clustering.py
-
-# Step 4: Annotation alignment
+# Step 3: Annotation alignment
 python src/annotations/generator.py
 
-# Step 5: Model training
+# Step 4: Model training
 python src/models/train.py
 
-# Step 6: Prediction
+# Step 5: Prediction
 python src/models/predict.py
 ```
 
@@ -303,24 +298,9 @@ flags.skip_pose_extraction
 
 ---
 
-### Step 3 — Pose Clustering (Optional)
 
-Computes:
 
-* Movement speed
-* Distance metrics
-* Interaction patterns
-* Cluster assignments
-
-Controlled by:
-
-```
-flags.skip_pose_clustering
-```
-
----
-
-### Step 4 — Annotation Alignment
+### Step 3 — Annotation Alignment
 
 * Maps annotation timestamps to frames
 * Automatically trims pose data
@@ -334,7 +314,7 @@ labeled_features.csv
 
 ---
 
-### Step 5 — Model Training
+### Step 4 — Model Training
 
 Supported models:
 
@@ -355,7 +335,7 @@ Training is skipped automatically if the model file already exists.
 
 ---
 
-### Step 6 — Prediction
+### Step 5 — Prediction
 
 #### Single Project
 
@@ -403,16 +383,6 @@ data/raw/<project>/project_config.yaml
 
 This file stores computed trim timestamps and metadata.
 
----
-
-## Reproducibility Features
-
-* Structured logging
-* Explicit parameter logging at startup
-* Environment variable capture
-* Deterministic feature generation
-* Config-driven execution
-* Step timing metrics
 
 ---
 
@@ -459,15 +429,4 @@ pytest tests/
 
 See `requirements.txt` for the full dependency list.
 
----
-
-## Recent Updates
-
-* Interactive `HF_TOKEN` prompt
-* Secure token handling
-* Structured logging system
-* Execution time tracking per step
-* Full configuration logging at startup
-* Subprocess STDOUT and STDERR capture
-* Improved reproducibility
 
