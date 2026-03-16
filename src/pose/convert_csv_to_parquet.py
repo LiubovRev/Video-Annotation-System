@@ -15,9 +15,9 @@ def convert_processed_csv_to_parquet(projects, directory):
                 df.to_parquet(parquet_file, engine="pyarrow", index=False)
                 print(f"Saved Parquet: {parquet_file}")
             except Exception as e:
-                print(f"⚠️ Error processing {csv_file}: {e}")
+                print(f" Error processing {csv_file}: {e}")
         else:
-            print(f"❌ File not found: {csv_file}")
+            print(f" File not found: {csv_file}")
 
 if __name__ == "__main__":
     projects = [
