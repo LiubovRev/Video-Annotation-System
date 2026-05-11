@@ -1,167 +1,170 @@
 # Clinical Video ML Pipeline for Behavioral Analysis
 
-This repository contains an end-to-end ML system developed during my work with clinical video data at Lausanne University Hospital (CHUV).
+A reproducible machine learning pipeline for **batch analysis of clinical
+therapy-session videos**. Developed during applied ML work with clinical
+video data at Lausanne University Hospital (CHUV).
 
-The pipeline processes raw therapy session videos, extracts pose keypoints, generates behavioral features, and trains machine learning models to classify interaction patterns.
-
-[![Python Version](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/)
-
-## Overview
-This project provides a lightweight annotation tool designed to support machine learning workflows for clinical video analysis.
-
-## Purpose
-The system was used to annotate video data for downstream computer vision tasks such as pose-based behavior classification.
-
-## ML Workflow
-Video preprocessing → Object tracking → Pose estimation →  Annotation alignment → Machine learning model training → Prediction on new data 
-
-## Why This Project Matters
-
-This system was built to transform unstructured clinical therapy videos into structured datasets suitable for machine learning experimentation.
-
-It bridges raw video processing, pose-based feature engineering, and supervised model training in a reproducible pipeline.
-
-## My contribution included:
-- designing and implementing the end-to-end processing pipeline
-- integrating pose estimation
-- developing feature extraction from skeleton keypoints
-- enabling dataset generation for downstream ML model training
-
-## Key Engineering Features
-
-- Config-driven pipeline execution
-- Modular step control (skip flags)
-- Structured logging with full parameter capture
-- Deterministic feature extraction
-- Automatic annotation-frame alignment
-- Model persistence and evaluation artifacts
-  
-## Status
-Applied ML prototype designed for scalable clinical video processing workflows.
+The pipeline ingests raw therapy session videos, extracts multi-person
+pose keypoints, engineers biomechanically-meaningful features, aligns
+expert annotations to frames, and trains gradient-boosted classifiers
+to recognize behavioral classes from skeletal kinematics.
 
 ---
 
-## Authentication (HF_TOKEN)
+## Scope and Status
 
-Some tracking models require a Hugging Face access token.
+This is a **research-grade pipeline with production engineering practices**.
+It is intentionally framed as a **batch analysis tool** for the research
+team, not a deployed inference service.
 
-### Runtime Behavior
+**What it is:**
+- An end-to-end *batch* pipeline: raw video → labeled keypoints → trained
+  classifiers → predictions and evaluation artifacts.
+- Config-driven, with per-stage skip flags, reproducible feature
+  engineering, time-aware validation, and explicit overfitting checks.
+- Built to be re-run on new recording sessions by the research team.
 
-When running the pipeline:
+**What it is not:**
+- Not a deployed real-time inference service.
+- No REST / gRPC interface, no container image, no CI.
+- Model versioning, drift monitoring, and integration tests are out of
+  scope for the current use case.
 
-- If `HF_TOKEN` is already set in your environment, it is used automatically.
-- If not, the system securely prompts you to enter it (input is hidden).
-- The token is automatically injected into the environment variable:
-
-### Set Token Permanently (Recommended)
-
-```bash
-export HF_TOKEN=your_token_here
-````
-
-Add this line to:
-
-```
-~/.bashrc
-```
-
-or
-
-```
-~/.zshrc
-```
+To take this to a production inference setting, the natural next steps
+would be: wrapping `predict.py` as a FastAPI service, containerizing
+with Docker, adding a model registry (e.g. MLflow), and monitoring
+for input drift in pose-keypoint distributions across recording
+conditions.
 
 ---
 
-## Logging System
-
-The pipeline includes structured logging.
-
-Each processed project produces:
+## What This Pipeline Does
 
 ```
-processing_log.log
+Raw video + expert annotations (timestamped behavioral labels)  
+        │  
+        ▼  
+Step 1 — Video preprocessing       (ffmpeg trim/crop, SAM tracking,  
+                                    MediaPipe multi-person pose)  
+        │  
+        ▼  
+Step 2 — Pose extraction           (parse psifx JSON, build keypoint  
+                                    DataFrame, per-person assignment)  
+        │  
+        ▼  
+Step 3 — Pose clustering           (optional; movement-based phases)  
+        │  
+        ▼  
+Step 4 — Annotation alignment      (map timestamped labels to frames,  
+                                    auto-trim, generate labeled dataset)  
+        │  
+        ▼  
+Step 5 — Model training            (feature engineering + 3-model  
+                                    benchmark with time-aware split)  
+        │  
+        ▼  
+Step 6 — Prediction                (inference + confusion matrix)  
 ```
 
-### Logged Information
-
-* Full configuration parameters
-* Crop settings
-* Trim timestamps
-* Model parameters
-* Executed command lines
-* Subprocess STDOUT and STDERR
-* Execution time per step
-* Pipeline success or failure state
-
-### Example Log Snippet
-
-```
-PIPELINE STARTED
-CONFIGURATION PARAMETERS
-DEVICE=cuda
-TEXT_PROMPT=person
-CHUNK_SIZE=300
-IOU_THRESHOLD=0.15
-MAX_OBJECTS=3
-START_TRIM_SEC=260
-END_TRIM_SEC=900
-CROP=(40,40) -> (1240,700)
-
-START STEP: SAM3 tracking
-END STEP: SAM3 tracking (142.38 sec)
-
-PIPELINE FINISHED SUCCESSFULLY
-```
-
-This ensures reproducibility and simplifies debugging.
+Each stage can be enabled or skipped via `src/config/config.yaml`.
 
 ---
 
-## Pipeline Architecture
+## Engineering Practices
 
-```
-Raw Video + Annotations
-        │
-        ▼
-Step 1: Video Processing
-        │
-        ▼
-Step 2: Pose Extraction
-        │
-        ▼
-Step 3: Annotation Alignment
-        │
-        ▼
-Step 4: Model Training
-        │
-        ▼
-Step 5: Prediction
-```
+The repository is structured around a few deliberate decisions:
+
+- **Config-driven execution.** All paths, hyperparameters, and per-stage
+  skip flags live in `src/config/config.yaml`. Per-project overrides via
+  an optional `project_config.yaml` inside each project directory.
+- **Modular pipeline stages.** Each stage exposes a `run_*()` function
+  (`run_video_processing`, `run_pose_extraction`,
+  `run_annotation_alignment`, `train_model`, `predict_annotations`) that
+  the orchestrator calls. Stages can also be run standalone via CLI.
+- **Idempotent training.** The orchestrator skips training when a saved
+  model artifact already exists; rerunning is cheap.
+- **Time-aware train/test split.** When `time_s` is available, the
+  training script splits on the 80th time-percentile rather than
+  randomly, to avoid temporal leakage between adjacent frames of the
+  same session. Falls back to stratified split when class coverage
+  isn't preserved.
+- **Explicit overfitting detection.** Train-vs-test F1 gap is logged per
+  model and flagged at configurable thresholds (`good` / `moderate` /
+  `severe`) — surfaced both in console output and in `model_metrics.json`.
+- **Reproducibility artifacts.** Each training run saves
+  `feature_names.json`, `model_metrics.json`, `model_comparison.png`,
+  and `feature_importance.png` alongside the model file.
 
 ---
 
-## Project Structure
+## Feature Engineering
+
+The core ML signal comes from biomechanical features derived from raw
+pose keypoints. This is the part most worth reading:
+
+- **Normalization.** Keypoints are translated relative to mid-hip and
+  scaled by torso length (neck-to-mid-hip), making features invariant
+  to camera distance and subject size.
+- **Joint angles.** 9 anatomical angles: elbow (L/R), shoulder (L/R),
+  knee (L/R), hip (L/R), trunk.
+- **Distances.** Inter-keypoint distances expressing posture and
+  reach: eye-to-eye, nose-to-neck, wrist-to-hip (L/R), wrist-to-nose
+  (L/R), nose-to-ankles, hip-to-ankle.
+- **Symmetry features.** Left-vs-right diffs on shoulders, hips,
+  elbow angles, knee angles, wrist-to-hip, shoulder angles.
+- **Center of mass and body spread.** COM as mid-hip / neck midpoint;
+  body spread in x and y as bounding ranges across wrists and ankles.
+- **Temporal derivatives.** Per-keypoint velocity and acceleration on a
+  curated subset (COM, nose, wrists, ankles, neck, mid-hip), grouped
+  by annotation segment so derivatives don't cross segment boundaries.
+
+After feature engineering, three feature-selection passes are applied:
+zero-variance removal, low-correlation-with-target removal, and
+redundancy removal (pairwise correlation > 0.95).
+
+---
+
+## Models
+
+Three gradient-boosted classifiers are benchmarked on the same
+train/test split:
+
+| Model                  | Notable settings                                   |
+|------------------------|----------------------------------------------------|
+| LightGBM               | Early stopping on a held-out 15% slice of train    |
+| XGBoost                | `RandomizedSearchCV` over 9 hyperparameters, 3-fold|
+| HistGradientBoosting   | Early stopping with `n_iter_no_change=20`          |
+
+All three use balanced or regularized settings appropriate for the
+class imbalance present in clinical behavioral data. The best model
+by weighted F1 on the held-out split is saved as the final artifact.
+
+---
+
+## Repository Layout
 
 ```
-video_annotation_system/
-│
+Video-Annotation-System/
 ├── src/
+│   ├── pipeline/
+│   │   └── full_pipeline.py         # Orchestrator
 │   ├── video_processing/
+│   │   └── processing.py            # Step 1: ffmpeg + psifx (SAM + MediaPipe)
 │   ├── pose/
+│   │   ├── extractor.py             # Step 2: JSON → keypoint DataFrame
+│   │   ├── clustering.py            # Step 3 (optional)
+│   │   └── convert_csv_to_parquet.py
 │   ├── annotations/
+│   │   └── generator.py             # Step 4: align labels to frames
 │   ├── models/
-│   ├── configs/
-│   │   └── config.yaml
-│   └── pipeline/
-│
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── annotations/
-│
-├── models/
-├── outputs/
+│   │   ├── train.py                 # Step 5: features + training + eval
+│   │   └── predict.py               # Step 6: inference
+│   └── config/
+│       └── config.yaml              # Central configuration
+├── tests/
+│   └── test_config.py
+├── data/                            # Project-organized inputs (gitignored)
+├── outputs/                         # Generated artifacts (gitignored)
 ├── requirements.txt
 └── README.md
 ```
@@ -170,243 +173,65 @@ video_annotation_system/
 
 ## Setup
 
-### 1. Create and Activate Virtual Environment (Using uv)
+External dependencies (must be installed and on `PATH`):
 
-From the project root:
+- `ffmpeg`
+- [`psifx`](https://github.com/idiap/psifx) — installed locally as a
+  development package; provides SAM-based tracking and MediaPipe
+  multi-person pose inference.
+
+A Hugging Face token is required for some tracking models. The pipeline
+reads `HF_TOKEN` from the environment and forwards it to psifx as
+`HUGGINGFACE_HUB_TOKEN`.
 
 ```bash
+# Create environment (uv recommended; venv also works)
 uv venv .venv
-```
-
-Activate on macOS / Linux:
-
-```bash
 source .venv/bin/activate
-```
 
-Activate on Windows (PowerShell):
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### 2. Install Dependencies
-
-Install `psifx` first (local package):
-
-```bash
+# Install psifx (local package — adjust path)
 uv pip install -e /path/to/psifx
-```
 
-Then install project requirements:
-
-```bash
+# Install project dependencies
 uv pip install -r requirements.txt
+
+# HF token (optional, only for some tracking models)
+export HF_TOKEN=your_token_here
 ```
 
 ---
 
 ## Usage
 
-### Run Full Pipeline
+### Full pipeline
 
 ```bash
 python src/pipeline/full_pipeline.py
 ```
 
-### Run Individual Steps
+The orchestrator iterates over project directories under
+`data/raw/<project_name>/`, runs each enabled stage, and writes
+artifacts to `outputs/<project_name>/`.
+
+### Individual stages
+
+Each stage can also be run standalone:
 
 ```bash
-# Step 1: Video processing
-python src/video_processing/processing.py
+# Step 1: video preprocessing for one project
+python src/video_processing/processing.py --project_dir data/raw/<project_name>
 
-# Step 2: Pose extraction
-python src/pose/extractor.py
+# Step 5: model training from a labeled CSV
+python src/models/train.py \
+    --input_csv outputs/combined_labeled_features.csv \
+    --output_dir outputs/ \
+    --config src/config/config.yaml
 
-# Step 3: Annotation alignment
-python src/annotations/generator.py
-
-# Step 4: Model training
-python src/models/train.py
-
-# Step 5: Prediction
-python src/models/predict.py
+# Step 6: prediction
+python src/models/predict.py --config src/config/config.yaml
 ```
 
-Each script reads configuration from:
-
-```
-configs/config.yaml
-```
-
----
-
-## Pipeline Stages
-
-### Step 1 — Video Processing
-
-**Inputs**
-
-* Raw video (e.g., `camera_a.mkv`)
-* Annotation timestamps
-
-**Operations**
-
-* Automatic trim computation from annotations
-* Object tracking (SAM-based)
-* Pose estimation (MediaPipe)
-* Overlay visualization
-
-**Outputs**
-
-```
-processed_video.mp4
-MaskDir/
-PosesDir/
-Visualizations/
-processing_log.log
-```
-
-Controlled by:
-
-```
-flags.skip_video_processing
-```
-
----
-
-### Step 2 — Pose Extraction
-
-Extracts:
-
-* Frame-level keypoints
-* Normalized coordinates
-* Movement features
-* Temporal derivatives
-
-Output:
-
-```
-processed_data.csv
-```
-
-Controlled by:
-
-```
-flags.skip_pose_extraction
-```
-
----
-
-
-
-### Step 3 — Annotation Alignment
-
-* Maps annotation timestamps to frames
-* Automatically trims pose data
-* Generates labeled dataset
-
-Output:
-
-```
-labeled_features.csv
-```
-
----
-
-### Step 4 — Model Training
-
-Supported models:
-
-* LightGBM
-* XGBoost
-* HistGradientBoosting
-
-Outputs:
-
-```
-model.joblib
-feature_names.json
-model_metrics.json
-feature_importance.png
-```
-
-Training is skipped automatically if the model file already exists.
-
----
-
-### Step 5 — Prediction
-
-#### Single Project
-
-Set in `config.yaml`:
-
-```yaml
-predict:
-  data_path: path/to/project
-```
-
-#### Batch Mode
-
-Leave `data_path` empty.
-
-Outputs:
-
-```
-predictions.csv
-confusion_matrix.png
-```
-
----
-
-## Configuration System
-
-All behavior is controlled via:
-
-```
-configs/config.yaml
-```
-
-This file includes:
-
-* Paths
-* Skip flags
-* Model hyperparameters
-* Prediction settings
-* Auto-trim behavior
-
-Optional per-project configuration:
-
-```
-data/raw/<project>/project_config.yaml
-```
-
-This file stores computed trim timestamps and metadata.
-
-
----
-
-## Example Output
-
-```
-data/processed/project_01/
-├── processed_video.mp4
-├── MaskDir/
-├── PosesDir/
-├── processed_data.csv
-├── labeled_features.csv
-└── processing_log.log
-
-outputs/
-├── model_xgboost.joblib
-├── model_metrics.json
-├── feature_importance.png
-└── model_training_summary.txt
-```
-
----
-
-## Automated Tests
+### Tests
 
 ```bash
 pytest tests/
@@ -414,19 +239,47 @@ pytest tests/
 
 ---
 
-## Requirements
+## Outputs
 
-* Python 3.10+
-* torch
-* mediapipe
-* scikit-learn
-* lightgbm
-* xgboost
-* opencv-python
-* pyyaml
-* matplotlib
-* seaborn
+Per project (`outputs/<project_name>/`):
 
-See `requirements.txt` for the full dependency list.
+```
+processed_data.csv               # Merged keypoint DataFrame
+labeled_features.csv             # After annotation alignment
+predictions_processed_data.csv   # If prediction stage is enabled
+```
 
+Global (`outputs/`):
 
+```
+combined_labeled_features.csv    # Concatenation across all projects
+model_<best_name>.joblib         # Best classifier by test F1
+feature_names.json               # Exact feature order used at training
+model_metrics.json               # Train/test metrics + overfitting flags
+model_comparison.png             # Three-model comparison plot
+feature_importance.png           # Top-20 importances per tree model
+```
+
+---
+
+## Logging
+
+Each project produces a `processing_log.log` capturing the full
+configuration, executed commands, subprocess stdout/stderr, per-step
+runtime, and final pipeline state. This is the primary mechanism for
+debugging and for reproducing a past run.
+
+---
+
+## Limitations
+
+- **Multi-person identity is heuristic.** Person IDs from SAM tracking
+  are mapped via `pose_extraction.id_to_label`; durable identity across
+  long videos is not guaranteed and is reviewed manually.
+- **Annotation schema is project-specific.** The `label_to_class`
+  mapping in `train.py` encodes a specific therapy-session taxonomy and
+  is not transferable as-is to other clinical settings.
+- **CUDA-only by default.** SAM tracking and pose inference are
+  configured for GPU; CPU fallback is possible via psifx but slow.
+- **Not validated on external datasets.** Results to date are
+  in-distribution for the CHUV recording setup.

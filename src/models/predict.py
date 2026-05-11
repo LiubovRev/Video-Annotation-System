@@ -103,8 +103,9 @@ def predict_annotations(data_path, output_dir, cfg=None):
     X.replace([np.inf, -np.inf], 0.0, inplace=True)
 
     # --- Predict ---
+    # Reload raw data to attach predictions (df above was reduced to feature columns only)
+    data = pd.read_csv(data_path).iloc[:len(X)].copy().reset_index(drop=True)
     preds = model.predict(X)
-    data = data.iloc[:len(X)].copy().reset_index(drop=True)
     data["predicted_annotation_label"] = preds
     if label_map:
         data["predicted_annotation_label_str"] = data["predicted_annotation_label"].map(label_map)

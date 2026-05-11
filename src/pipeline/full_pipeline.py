@@ -76,6 +76,7 @@ skip_video_processing      = flags_cfg.get("skip_video_processing", False)
 skip_pose_extraction       = flags_cfg.get("skip_pose_extraction", False)
 skip_pose_clustering       = flags_cfg.get("skip_pose_clustering", True)
 skip_annotation_processing = flags_cfg.get("skip_annotation_processing", False)
+skip_prediction            = flags_cfg.get("skip_prediction", False)
 force_recombine            = flags_cfg.get("force_recombine", False)
 
 

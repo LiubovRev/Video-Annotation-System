@@ -14,6 +14,7 @@ flags:
   skip_pose_extraction:       false
   skip_pose_clustering:       true
   skip_annotation_processing: false
+  skip_prediction:            false
   force_recombine:            false
 
 # -----------------------------------------------------------------------------
@@ -28,6 +29,26 @@ video_processing:
   model_size:         "small"
   object_class:       0
   device:             "cuda"
+
+  # SAM tracking
+  text_prompt:        "person"
+  chunk_size:         400
+  iou_threshold:      0.15
+  max_objects:        3
+
+  # Pose inference
+  pose_mask_threshold:    "0.0"
+  pose_model_complexity:  "2"
+
+  # Trim + crop (per-project override via project_config.yaml is recommended)
+  start_trim_sec:  0
+  end_trim_sec:    null
+  x_min:           40
+  y_min:           40
+  x_max:           1240
+  y_max:           700
+  resize_w:        null
+  resize_h:        null
 
 # -----------------------------------------------------------------------------
 # Pose Extraction
