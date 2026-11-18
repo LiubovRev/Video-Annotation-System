@@ -11,4 +11,4 @@ seaborn>=0.12
 pyyaml>=6.0
 joblib>=1.3
 # External tools for step 1 (not pip-installable from here):
-#   ffmpeg, psifx (https://github.com/idiap/psifx)
+#   ffmpeg, psifx (https://github.com/psifx/psifx)

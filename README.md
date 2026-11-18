@@ -7,7 +7,7 @@ developed for applied ML work with clinical video data at Lausanne
 University Hospital (CHUV).
 
 It takes raw session videos, tracks every person (SAM3) and estimates their
-pose (MediaPipe, via [psifx](https://github.com/idiap/psifx)), aligns expert
+pose (MediaPipe, via [psifx](https://github.com/psifx/psifx)), aligns expert
 WAKEE annotations to pose frames, and trains gradient-boosted classifiers
 that recognise behaviour codes from body kinematics. Predictions are written
 back as time-stamped segments that can be reviewed in an annotation tool.
@@ -218,7 +218,7 @@ are optimistic; use the held-out metrics in `outputs/training/`.
 External tools for step 1 (needed only on the machine that processes video):
 
 * `ffmpeg` / `ffprobe`
-* [`psifx`](https://github.com/idiap/psifx) with SAM3 and MediaPipe
+* [`psifx`](https://github.com/psifx/psifx) with SAM3 and MediaPipe
   (`pip install -e /path/to/psifx`). Some tracking models need a Hugging
   Face token: `export HF_TOKEN=…` (forwarded as `HUGGINGFACE_HUB_TOKEN`).
 

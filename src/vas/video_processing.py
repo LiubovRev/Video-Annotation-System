@@ -8,7 +8,7 @@ Per session folder::
     <session>/PosesDir/<id>.tar.gz      MediaPipe poses, one per track
     <session>/Visualizations/*.mp4      optional QA renders
 
-External tools: ``ffmpeg`` and ``psifx`` (https://github.com/idiap/psifx).
+External tools: ``ffmpeg`` and ``psifx`` (https://github.com/psifx/psifx).
 """
 
 from __future__ import annotations
