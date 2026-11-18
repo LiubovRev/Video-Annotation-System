@@ -48,6 +48,16 @@ pytest
 The demo writes everything under `demo/` (pose tables, labeled frames,
 model bundle, predictions, plots).
 
+### Demo results (synthetic data)
+
+Held-out session, 6 behaviour codes. Synthetic poses are easy to separate,
+so these numbers show that the pipeline works, not how well it performs on
+real recordings.
+
+![Confusion matrix](docs/img/demo/confusion_matrix.png)
+![Model comparison](docs/img/demo/model_comparison.png)
+![Feature importance](docs/img/demo/feature_importance.png)
+
 ---
 
 ## Pipeline
