@@ -17,7 +17,7 @@ htmlcov/
 data/
 outputs/
 models/
-demo/
+/demo/
 *.mkv
 *.mp4
 *.avi
