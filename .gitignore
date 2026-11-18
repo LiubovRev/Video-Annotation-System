@@ -1,0 +1,45 @@
+# Environments
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Data, results and models — clinical data must never be committed
+data/
+outputs/
+models/
+demo/
+*.mkv
+*.mp4
+*.avi
+*.mov
+*.tar.gz
+*.parquet
+*.joblib
+*.log
+
+# psifx intermediates inside session folders
+MaskDir/
+MaskDir_merged/
+PosesDir/
+FacesDir/
+Visualizations/
+Frames/
+
+# Notebooks: commit without outputs (they may contain patient frames)
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

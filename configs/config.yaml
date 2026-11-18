@@ -1,0 +1,198 @@
+# =============================================================================
+# Video Annotation System — central configuration
+#
+# Every value can be overridden per recording session by placing a
+# `project_config.yaml` inside the session folder (data/raw/<session>/).
+# The override file has the same structure as this one and is deep-merged
+# on top of it, e.g.
+#
+#   video_processing:
+#     start_trim_sec: 12.5
+#     x_min: 0
+#   pose_extraction:
+#     id_to_label: {1: Therapist1, 2: Patient1}
+#   annotation_alignment:
+#     annotation_file: my_session_WAKEE.txt
+# =============================================================================
+
+directories:
+  # All relative paths below are resolved against `root`, which itself is
+  # resolved relative to the folder that contains this config file.
+  root:             ".."
+  raw_video_root:   "data/raw"          # one sub-folder per recording session
+  annotations_dir:  "data/annotations"  # WAKEE .txt exports (also searched inside each session folder)
+  output_dir:       "outputs"           # per-session and global results
+  models_dir:       "models"            # trained model bundle
+
+flags:
+  skip_video_processing:      false
+  skip_pose_extraction:       false
+  skip_pose_clustering:       true
+  skip_annotation_processing: false
+  skip_training:              false
+  skip_prediction:            false
+  force_recompute:            false     # ignore cached per-session outputs
+  force_retrain:              false     # retrain even if a model bundle exists
+
+logging:
+  level: "INFO"
+
+# -----------------------------------------------------------------------------
+# Step 1 — Video processing (ffmpeg + psifx SAM3 tracking + MediaPipe pose)
+# -----------------------------------------------------------------------------
+video_processing:
+  raw_video_filename: "camera_a.mkv"
+  device:             "cuda"            # "cuda" or "cpu"
+
+  # SAM3 tracking
+  text_prompt:        "person"
+  chunk_size:         400
+  iou_threshold:      0.15
+  max_objects:        3                 # forwarded as PSIFX_MAX_OBJECTS
+  sam3_extra_args:    []                # e.g. ["--max_num_objects", "3", "--id_correction"]
+
+  # Pose inference
+  pose_mask_threshold:   0.0
+  pose_model_complexity: 2
+  pose_extra_args:       []
+
+  visualizations: true                  # render tracking.mp4 / pose.mp4
+
+  # Trim + crop. Trim values are also used to shift pose timestamps back
+  # to the original video time when aligning annotations.
+  start_trim_sec: 0
+  end_trim_sec:   null
+  x_min: 40
+  y_min: 40
+  x_max: 1240
+  y_max: 700
+  resize_w: null
+  resize_h: null
+
+# -----------------------------------------------------------------------------
+# Step 2 — Pose extraction (psifx pose archives → frame table)
+# -----------------------------------------------------------------------------
+pose_extraction:
+  directory: "PosesDir"
+  # Frame rate of the processed video. null → probed with ffprobe from
+  # processed_video.mp4 (falls back to 15 when ffprobe is unavailable).
+  fps: 15
+  # psifx's MediaPipe tool writes the 33 MediaPipe landmarks. "body25" is
+  # only for archives produced by an OpenPose-style tool.
+  keypoint_format: "mediapipe"
+  confidence_threshold: 0.5             # keypoints below this visibility → NaN
+  # Track id (the N in N.tar.gz written by psifx) → person label.
+  # SAM3 ids differ between sessions, so override this per session.
+  id_to_label:
+    1: "Therapist1"
+    2: "Patient1"
+    3: "Person3"
+
+# Person label → role. Roles connect pose tracks to annotation codes and
+# are used by clustering and as a model feature.
+roles:
+  Therapist1: "Therapist"
+  Therapist2: "Therapist"
+  Patient1:   "Child"
+  Child:      "Child"
+  Therapist:  "Therapist"
+
+# -----------------------------------------------------------------------------
+# Step 3 — Pose clustering (optional, exploratory)
+# -----------------------------------------------------------------------------
+pose_clustering:
+  movement_threshold:   10      # px/s on the smoothed centre of mass
+  proximity_close:      200     # px
+  proximity_medium:     400     # px
+  response_window:      5       # s
+  confidence_threshold: 0.5
+  smooth_window:        11      # frames (Savitzky–Golay)
+  smooth_poly:          3
+  k_range:              [2, 8]  # KMeans k in [2, 8)
+  phase_window:         30      # s
+  n_phases:             4
+  max_frames_for_k_search: 5000 # subsample for silhouette (O(n²))
+  therapist_role: "Therapist"
+  child_role:     "Child"
+
+# -----------------------------------------------------------------------------
+# Step 4 — Annotation alignment
+# -----------------------------------------------------------------------------
+annotation_alignment:
+  annotation_file: null         # per-session override; otherwise auto-discovered
+  # Annotation-code prefix → role (longest prefix wins). Codes whose prefix
+  # does not match are ignored.
+  label_prefix_map:
+    "C": "Child"
+    "T": "Therapist"
+  # Codes to ignore before matching (e.g. other tiers that overlap in time).
+  # Codes whose class (model_training.label_to_class) is a non-posture
+  # class are ignored automatically.
+  exclude_labels: []
+  # When several annotations of one role overlap a frame, keep the
+  # shortest (most specific) one.
+  overlap_strategy: "shortest"  # "shortest" or "first"
+
+# -----------------------------------------------------------------------------
+# Step 5 — Features + training
+# -----------------------------------------------------------------------------
+features:
+  max_gap_s: 0.5                # a time gap larger than this starts a new track segment
+  rolling_window_s: 1.0         # window for rolling speed statistics
+  interpersonal: true           # distance/direction to the other tracked person
+
+model_training:
+  min_samples_per_class: 30
+  test_size: 0.2
+  # "auto": hold out whole sessions when there are ≥ 3, otherwise hold out
+  # the last `test_size` of each session in time. "session" | "time" | "auto"
+  split_strategy: "auto"
+  purge_gap_s: 2.0              # frames this close to the time split are dropped
+  n_iter_search: 30
+  cv_folds: 3
+  selection_metric: "f1_macro"  # "f1_macro" | "f1_weighted" | "balanced_accuracy"
+  models: ["LightGBM", "XGBoost", "HistGradientBoosting"]
+  redundancy_threshold: 0.95
+  random_state: 42
+  non_posture_classes: ["vocalizations", "unlabeled"]
+  label_to_class:
+    CS: vocalizations
+    CNS: vocalizations
+    TS: vocalizations
+    TNS: vocalizations
+    CGO: unlabeled
+    TGO: unlabeled
+    TC: joint_attention
+    AO: joint_attention
+    AT: joint_attention
+    GO: joint_attention
+    GT: joint_attention
+    T: interactions
+    T_V: interactions
+    T_P: interactions
+    C: interactions
+    TST: coordination
+    THO: coordination
+    TSI: coordination
+    TLF: coordination
+    TRE: coordination
+    TCR: coordination
+    CST: coordination
+    CHO: coordination
+    CSI: coordination
+    CLF: coordination
+    CRE: coordination
+    CCR: coordination
+
+model:
+  bundle_file: "model_bundle.joblib"   # inside directories.models_dir
+
+# -----------------------------------------------------------------------------
+# Step 6 — Prediction
+# -----------------------------------------------------------------------------
+predict:
+  smooth_window_s: 0.0          # >0 → average class probabilities over this window
+  min_segment_s: 0.0            # drop predicted segments shorter than this
+
+plotting:
+  dpi: 150

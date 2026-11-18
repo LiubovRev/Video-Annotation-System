@@ -1,16 +1,14 @@
-numpy
-pandas
-scikit-learn
-scipy
-opencv-python
-matplotlib
-seaborn
-pyyaml
-tqdm
-joblib
-xgboost
-lightgbm
-shap
-optuna
-torch
-torchvision
+# Runtime dependencies (same as pyproject.toml). Prefer: pip install -e ".[dev]"
+numpy>=1.24
+pandas>=2.0
+pyarrow>=14
+scipy>=1.10
+scikit-learn>=1.3
+xgboost>=2.0
+lightgbm>=4.0
+matplotlib>=3.7
+seaborn>=0.12
+pyyaml>=6.0
+joblib>=1.3
+# External tools for step 1 (not pip-installable from here):
+#   ffmpeg, psifx (https://github.com/idiap/psifx)
